@@ -1,29 +1,35 @@
 version: 0.2
 
+env:
+  variables:
+    ImageName: app-two
+    AWS_DEFAULT_REGION: us-east-2
+
 phases:
-  pre_build:
-    commands:
-      - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URI
-      - REPOSITORY_URI="$ECR_REGISTRY_URI/$ECR_REPOSITORY_NAME"
-      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7) # Use short commit hash as tag
+ pre_build:
+  commands:
+    - echo "SRC DIR = $CODEBUILD_SRC_DIR"
+    - ls -la $CODEBUILD_SRC_DIR
+
+    - echo "Login to ECR"
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 492267475956.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+
+    - |
+      aws ecr describe-repositories \
+        --repository-names $ImageName \
+        --region $AWS_DEFAULT_REGION \
+      || aws ecr create-repository \
+        --repository-name $ImageName \
+        --region $AWS_DEFAULT_REGION
+
 
   build:
     commands:
-      - echo Build started on `date`
-      - echo Building the Docker image...
-      - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
-      - docker tag $REPOSITORY_URI:$IMAGE_TAG $REPOSITORY_URI:latest # Also tag as latest
+      - cd $CODEBUILD_SRC_DIR
+      - ls -la
+      - docker build -t $ImageName -f app-two/Dockerfile .
 
   post_build:
     commands:
-      - echo Build completed on `date`
-      - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - docker push $REPOSITORY_URI:latest
-      - echo Generating image definitions file...
-      - printf '[{"name":"container-name","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json # For CodePipeline
-
-artifacts:
-  files:
-    - imagedefinitions.json
+      - docker tag $ImageName:latest 492267475956.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ImageName:latest
+      - docker push 492267475956.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ImageName:latest
