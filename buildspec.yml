@@ -8,14 +8,8 @@ env:
 
 phases:
   pre_build:
-    commands:
-      - echo "SRC DIR = $CODEBUILD_SRC_DIR"
-      - ls -la $CODEBUILD_SRC_DIR
-
-      - echo "Login to ECR"
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
-        docker login --username AWS --password-stdin \
-        492267475956.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+  commands:
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 492267475956.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
       - |
         aws ecr describe-repositories \
